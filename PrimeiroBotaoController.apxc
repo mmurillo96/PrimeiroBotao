@@ -1,0 +1,48 @@
+public class PrimeiroBotaoController {
+    
+    @AuraEnabled
+    public static ViaCepJson consultaCep(String cepDigitado){
+        
+        Http http = new Http();
+        HttpRequest request = new HttpRequest();
+        request.setEndpoint('http://viacep.com.br/ws/'+cepDigitado+'/json/');
+        request.setMethod('GET');
+        HttpResponse response = http.send(request);
+        // If the request is successful, parse the JSON response.
+         ViaCepJson results = new ViaCepJson();
+        system.debug('results: '+results);
+        if (response.getStatusCode() == 200) {            
+            results = (ViaCepJson) JSON.deserialize(response.getBody(),ViaCepJson.class);
+            system.debug('results');
+            system.debug(results);
+            system.debug(results.logradouro);
+            system.debug(results.bairro);
+        }                
+        
+        return results;    
+    }
+    
+    @AuraEnabled
+    public static boolean atualizaEndereco(String idConta, String jsonViaCep){
+        try{           
+            ViaCepJson results = (ViaCepJson) JSON.deserialize(jsonViaCep,ViaCepJson.class);            
+            Account acc = [SELECT id,BillingStreet, BillingCity, BillingState, BillingPostalCode FROM Account WHERE id =:idConta];
+            acc.BillingStreet = results.logradouro;
+            acc.BillingCity = results.localidade;
+            acc.BillingState = results.uf;
+            acc.BillingPostalCode = results.cep;
+            
+            update acc;
+            
+            return true;
+            
+        }catch(exception e){
+            system.debug(e.getLineNumber());
+            system.debug(e.getMessage());
+            return false;
+        }
+        
+    }
+      
+    
+}
